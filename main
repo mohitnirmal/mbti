@@ -1,0 +1,121 @@
+// Full-Fledged MBTI Personality Test App (React + Tailwind + Router)
+import React, { useState } from "react";
+import { BrowserRouter as Router, Route, Routes, useNavigate } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+
+const questions = [
+  {
+    id: 1,
+    text: "You find it takes effort to introduce yourself to other people.",
+    explanation: "This helps assess if you're more introverted (I) or extroverted (E).",
+    dimension: "EI",
+    options: ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+  },
+  {
+    id: 2,
+    text: "You consider yourself more practical than creative.",
+    explanation: "This explores your preference for sensing (S) vs intuition (N).",
+    dimension: "SN",
+    options: ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+  },
+  // More questions can be added similarly for full coverage
+];
+
+const dimensionScoreMap = {
+  EI: ["E", "E", null, "I", "I"],
+  SN: ["N", "N", null, "S", "S"],
+  TF: ["T", "T", null, "F", "F"],
+  JP: ["P", "P", null, "J", "J"],
+};
+
+function LandingPage() {
+  const navigate = useNavigate();
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center space-y-8 p-6 text-center">
+      <h1 className="text-4xl font-bold">MBTI Personality Test</h1>
+      <p className="text-gray-600 max-w-md">
+        Discover your personality type based on the Myers-Briggs framework. Answer honestly to get the most accurate result.
+      </p>
+      <Button className="text-lg px-6 py-3" onClick={() => navigate("/test")}>Start Test</Button>
+    </div>
+  );
+}
+
+function TestPage() {
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState([]);
+  const navigate = useNavigate();
+
+  const handleAnswer = (index) => {
+    const updatedAnswers = [...answers, { ...questions[currentQuestion], choice: index }];
+    setAnswers(updatedAnswers);
+
+    if (currentQuestion + 1 < questions.length) {
+      setCurrentQuestion(currentQuestion + 1);
+    } else {
+      localStorage.setItem("mbti_answers", JSON.stringify(updatedAnswers));
+      navigate("/result");
+    }
+  };
+
+  const progress = ((currentQuestion + 1) / questions.length) * 100;
+  const question = questions[currentQuestion];
+
+  return (
+    <div className="p-6 max-w-xl mx-auto space-y-6">
+      <Progress value={progress} className="h-2" />
+      <Card className="rounded-2xl shadow-lg">
+        <CardContent className="p-6 space-y-4">
+          <h2 className="text-xl font-semibold">{question.text}</h2>
+          <p className="text-sm text-gray-600">{question.explanation}</p>
+          <div className="grid grid-cols-1 gap-3">
+            {question.options.map((opt, idx) => (
+              <Button key={opt} className="text-base" onClick={() => handleAnswer(idx)}>
+                {opt}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ResultPage() {
+  const answers = JSON.parse(localStorage.getItem("mbti_answers"));
+  const scores = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
+
+  answers.forEach((q) => {
+    const trait = dimensionScoreMap[q.dimension][q.choice];
+    if (trait) scores[trait]++;
+  });
+
+  const mbti = [
+    scores.I >= scores.E ? "I" : "E",
+    scores.S >= scores.N ? "S" : "N",
+    scores.T >= scores.F ? "T" : "F",
+    scores.J >= scores.P ? "J" : "P",
+  ].join("");
+
+  return (
+    <div className="p-6 max-w-xl mx-auto text-center space-y-6">
+      <h1 className="text-3xl font-bold">Your MBTI Type</h1>
+      <div className="text-5xl font-extrabold text-indigo-600">{mbti}</div>
+      <Button onClick={() => window.location.href = "/"}>Retake Test</Button>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/test" element={<TestPage />} />
+        <Route path="/result" element={<ResultPage />} />
+      </Routes>
+    </Router>
+  );
+}
